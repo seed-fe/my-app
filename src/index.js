@@ -2,22 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 class Square extends React.Component {
-    constructor(props) {
-      // 当子类中有构造函数时必须调用super方法，super是父类的构造函数，用来新建父类的this对象，因为子类自己的this对象必须先通过父类的构造函数完成塑造，得到与父类同样的实例属性和方法。
-      // 仅当想在constructor内使用props才将props传入super，将props传入super的作用是可以使你在constructor内访问它。
-      super(props);
-      this.state = {
-        value: null,
-      };
-    }
+  // square组件不再持有state，从board组件中接收值，目前的square组件是受控组件
     render() {
       return (
         <button 
           className="square" 
-          onClick={() => this.setState({value: 'X'})}
+          onClick={() => this.props.onClick()}
         >
           {/* 这里用了this但没有调用super，仅当存在constructor的时候必须调用super，如果没有，则不用 */}
-          {this.state.value}
+          {this.props.value}
         </button>
       );
     }
@@ -25,8 +18,25 @@ class Square extends React.Component {
   
   class Board extends React.Component {
     // 仅当存在constructor的时候必须调用super，如果没有，则不用，参考https://segmentfault.com/a/1190000008165717
+    constructor(props) {
+      super(props);
+      this.state = {
+        squares: Array(9).fill(null),
+      };
+    }
+    handleClick(i) {
+      // slice无参数可实现浅复制，浅复制拷贝的是引用，两个变量指向同一个数组
+      const squares = this.state.squares.slice();
+      squares[i] = 'X';
+      this.setState({squares: squares});
+    }
     renderSquare(i) {
-      return <Square value={i} />;
+      return (
+        // board调用了square，是square的父组件
+        <Square 
+          value={this.state.squares[i]}
+          onClick={() => this.handleClick(i)} 
+        />);
     }
   
     render() {
