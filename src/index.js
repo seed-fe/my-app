@@ -11,48 +11,18 @@ function Square(props) {
 }
 
 class Board extends React.Component {
-  // 仅当存在constructor的时候必须调用super，如果没有，则不用，参考https://segmentfault.com/a/1190000008165717
-  constructor(props) {
-    super(props);
-    this.state = {
-      squares: Array(9).fill(null),
-      xIsNext: true,
-    };
-  }
-  handleClick(i) {
-    // slice无参数可实现浅复制，浅复制拷贝的是引用，两个变量指向同一个数组
-    const squares = this.state.squares.slice();
-    // 当有玩家胜出或某个square已被填充，该函数不做任何处理直接返回
-    if (calculateWinner(squares) || squares[i]) {
-      return;
-    }
-    squares[i] = this.state.xIsNext ? 'X' : 'O';
-    this.setState({
-      squares: squares,
-      xIsNext: !this.state.xIsNext,
-    });
-  }
   renderSquare(i) {
     return (
       // board调用了square，是square的父组件
       <Square 
-        value={this.state.squares[i]}
-        onClick={() => this.handleClick(i)} 
+        value={this.props.squares[i]}
+        onClick={() => this.props.onClick(i)} 
       />);
   }
 
   render() {
-    const winner = calculateWinner(this.state.squares);
-    let status;
-    if (winner) {
-      status = 'Winner: ' + winner;
-    } else {
-      status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-    }
-
     return (
       <div>
-        <div className="status">{status}</div>
         <div className="board-row">
           {this.renderSquare(0)}
           {this.renderSquare(1)}
@@ -74,15 +44,71 @@ class Board extends React.Component {
 }
 
 class Game extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      history: [{
+        squares: Array(9).fill(null),
+      }],
+      stepNumber: 0, // 当前正在查看哪一项历史记录
+      xIsNext: true,
+    };
+  }
+  // handleClick方法从Board组件移到Game组件中
+  handleClick(i) {
+    const history = this.state.history.slice(0, this.state.stepNumber + 1); // 保证回到过去后把未来不正确的历史记录丢弃掉
+    const current = history[history.length - 1];
+    const squares = current.squares.slice();
+    if (calculateWinner(squares) || squares[i]) {
+      return;
+    }
+    squares[i] = this.state.xIsNext ? 'X' : 'O';
+    this.setState({
+      history: history.concat([{
+        squares: squares,
+      }]),
+      stepNumber: history.length, // 每走一步更新stepNumber
+      xIsNext: !this.state.xIsNext,
+    })
+  }
+  jumpTo(step) {
+    this.setState({
+      stepNumber: step,
+      xIsNext: (step % 2) === 0,
+    });
+  }
   render() {
+    // const的作用域与let命令相同：只在声明所在的块级作用域内有效。
+    const history = this.state.history;
+    const current = history[this.state.stepNumber];
+    const winner = calculateWinner(current.squares);
+    const moves = history.map((step, move) => {
+      const desc = move ?
+        'Go to move #' + move :
+        'Go to game start';
+      return (
+        <li key={move}>
+          <button onClick={() => this.jumpTo(move)}>{desc}</button>
+        </li>
+      );
+    });
+    let status;
+    if (winner) {
+      status = 'Winner: ' + winner;
+    } else {
+      status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
+    }
     return (
       <div className="game">
         <div className="game-board">
-          <Board />
+          <Board
+            squares={current.squares}
+            onClick={(i) => this.handleClick(i)}
+          />
         </div>
         <div className="game-info">
-          <div>{/* status */}</div>
-          <ol>{/* TODO */}</ol>
+          <div>{status}</div>
+          <ol>{moves}</ol>
         </div>
       </div>
     );
